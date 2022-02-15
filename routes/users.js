@@ -18,7 +18,6 @@ router.post("/signup", function (req, res, next) {
   if (!req.body.password) {
     errors.push("You need a password");
   }
-
   if (errors.length > 0) {
     res.json(errors);
   }
@@ -32,14 +31,73 @@ router.post("/signup", function (req, res, next) {
   })
     .then((createdUser) => {
       console.log("User was created", createdUser);
+      console.log(req.session);
+
+      req.session.user = createdUser;
+
+      console.log(req.session.user);
       res.json(createdUser);
     })
     .catch((err) => {
-      console.log("Something went wrong", err.errors);
+      console.log("Something went wrong", err);
       res.json(err);
     });
 });
 
-module.exports = router;
+router.post("/login", (req, res) => {
 
-// const match = bcrypt.compareSync("password", hashedPass);
+  let errors = [];
+  if (!req.body.username) {
+    errors.push("You did not include a name!");
+  }
+  if (!req.body.password) {
+    errors.push("You need a password");
+  }
+
+  if (errors.length > 0) {
+    res.json(errors);
+  }
+
+
+  User.findOne({ username: req.body.username })
+    .then((foundUser) => {
+
+      if (!foundUser) {
+      
+        return res.json("Username not found");
+      }
+
+      const match = bcrypt.compareSync(req.body.password, foundUser.password);
+
+      if (!match) {
+
+        return res.json("Incorrect password");
+      }
+
+      req.session.user = foundUser;
+
+      console.log(req.session.user);
+      res.json(`Welcome to our website, ${req.session.user.username}!`);
+    })
+    .catch((err) => {
+      console.log("Something went wrong", err);
+      res.json(err);
+    });
+});
+
+router.get("/test-session", (req, res) => {
+  console.log("Req session", req.session);
+  if (req.session?.user?.username) {
+    res.json(`Hi ${req.session.user.username}!`);
+  } else {
+    res.json("You are not logged in");
+  }
+});
+
+router.get("/logout", (req, res) => {
+  req.session.destroy();
+  console.log("This is the session", req.session);
+  res.json("you have logged out");
+});
+
+module.exports = router;
